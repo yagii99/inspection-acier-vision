@@ -1,0 +1,61 @@
+<Window x:Class="InspectionWpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Inspection – caméra émulée" Height="680" Width="1150"
+        Closing="Window_Closing">
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="360"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Image en direct -->
+        <Border Grid.Column="0" Background="#111111" Margin="0,0,10,0">
+            <Image x:Name="ImageLive" Stretch="Uniform"/>
+        </Border>
+
+        <!-- Panneau de contrôle -->
+        <DockPanel Grid.Column="1">
+            <StackPanel DockPanel.Dock="Top">
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <Ellipse x:Name="VoyantEtat" Width="14" Height="14" Fill="Gray" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="TexteEtat" Text="Arrêtée" FontWeight="Bold" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <UniformGrid Columns="2" Margin="0,0,0,12">
+                    <Button x:Name="BoutonDemarrer" Content="Démarrer" Margin="0,0,5,5" Padding="6"
+                            Click="Demarrer_Click"/>
+                    <Button x:Name="BoutonArreter" Content="Arrêter" Margin="5,0,0,5" Padding="6"
+                            Click="Arreter_Click" IsEnabled="False"/>
+                    <Button x:Name="BoutonPanne" Content="Forcer une panne" Margin="0,0,5,0" Padding="6"
+                            Click="Panne_Click" IsEnabled="False"/>
+                    <Button x:Name="BoutonDeconnexion" Content="Simuler déconnexion" Margin="5,0,0,0" Padding="6"
+                            Click="Deconnexion_Click" IsEnabled="False"/>
+                </UniformGrid>
+
+                <TextBlock Text="Temps d'exposition (µs)"/>
+                <DockPanel Margin="0,0,0,10">
+                    <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right"
+                               Text="{Binding Value, ElementName=SliderExposition, StringFormat=F0}"/>
+                    <Slider x:Name="SliderExposition" Minimum="100" Maximum="100000" Value="5000"
+                            ValueChanged="Exposition_Changed"/>
+                </DockPanel>
+
+                <TextBlock Text="Durée de traitement simulée (ms)"/>
+                <DockPanel Margin="0,0,0,12">
+                    <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right"
+                               Text="{Binding Value, ElementName=SliderTraitement, StringFormat=F0}"/>
+                    <Slider x:Name="SliderTraitement" Minimum="0" Maximum="200" Value="20"
+                            ValueChanged="Traitement_Changed"/>
+                </DockPanel>
+
+                <TextBlock x:Name="TexteCompteurs" FontFamily="Consolas" Margin="0,0,0,12"/>
+
+                <TextBlock Text="Journal" FontWeight="Bold" Margin="0,0,0,4"/>
+            </StackPanel>
+
+            <ListBox x:Name="ListeJournal" FontFamily="Consolas" FontSize="11"/>
+        </DockPanel>
+    </Grid>
+</Window>

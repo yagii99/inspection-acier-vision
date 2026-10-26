@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PlatformTarget>x64</PlatformTarget>
+    <RootNamespace>InspectionWpf</RootNamespace>
+
+    <!-- Le même chemin que dans ton projet du cours 1 -->
+    <PylonAssembly>C:\Program Files\Basler\pylon\Development\Assemblies\Basler.Pylon\net472\x64\Basler.Pylon.dll</PylonAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Basler.Pylon">
+      <HintPath>$(PylonAssembly)</HintPath>
+    </Reference>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.*" />
+    <PackageReference Include="OpenCvSharp4" Version="4.*" />
+    <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.*" />
+  </ItemGroup>
+
+</Project>

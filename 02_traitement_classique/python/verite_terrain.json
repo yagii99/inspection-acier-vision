@@ -1,0 +1,29 @@
+{
+  "mm_par_pixel": 0.25,
+  "defauts": [
+    {
+      "type": "rayure",
+      "centre_px": [
+        350,
+        180
+      ],
+      "longueur_mm": 101.1
+    },
+    {
+      "type": "tache",
+      "centre_px": [
+        850,
+        380
+      ],
+      "diametre_mm": 14.0
+    },
+    {
+      "type": "inclusion",
+      "centre_px": [
+        300,
+        470
+      ],
+      "diametre_mm": 1.5
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+# .NET
+bin/
+obj/
+.vs/
+*.user
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Données et résultats lourds (non versionnés)
+NEU-DET/
+neu_yolo/
+runs/
+*.pt
+*.onnx
+inspection_*/
+journal.csv
+detections_*.csv
+seuils_par_classe.json
