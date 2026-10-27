@@ -23,7 +23,7 @@ public sealed record Frame(long Id, int Largeur, int Hauteur, byte[] Pixels, Dat
 public sealed record ResultatImage(long Id, int Largeur, int Hauteur, byte[] Pixels, double Moyenne,
                                    TimeSpan Latence, List<Detection> Detections, double InferenceMs);
 
-public readonly record struct Stats(long Recues, long Traitees, long Perdues, long Ratees, long Erreurs, long AvecDefaut);
+public readonly record struct Stats(long Recues, long Traitees, long NonInspectees, long Ratees, long Erreurs, long AvecDefaut);
 
 public sealed class CameraService : IDisposable
 {
@@ -42,7 +42,12 @@ public sealed class CameraService : IDisposable
     private bool _connectee;
     private double _exposition = 5000;
 
-    private long _recues, _traitees, _perdues, _ratees, _erreurs, _avecDefaut;
+    // Inspection exhaustive : on ne jette jamais une image en silence.
+    // La file absorbe les pics passagers ; si elle est pleine, l'image est refusée,
+    // comptée et journalisée comme ZONE NON INSPECTÉE (à recontrôler).
+    private const int CapaciteFile = 30;
+
+    private long _recues, _traitees, _nonInspectees, _ratees, _erreurs, _avecDefaut;
     private volatile int _dureeTraitementMs = 0;
 
     public event Action<ResultatImage>? ImageTraitee;
@@ -63,7 +68,7 @@ public sealed class CameraService : IDisposable
     }
 
     public Stats Statistiques() => new(
-        Interlocked.Read(ref _recues), Interlocked.Read(ref _traitees), Interlocked.Read(ref _perdues),
+        Interlocked.Read(ref _recues), Interlocked.Read(ref _traitees), Interlocked.Read(ref _nonInspectees),
         Interlocked.Read(ref _ratees), Interlocked.Read(ref _erreurs), Interlocked.Read(ref _avecDefaut));
 
     // ------------------------------------------------------------------
@@ -88,13 +93,14 @@ public sealed class CameraService : IDisposable
         if (infos.Count == 0)
             throw new InvalidOperationException("Aucune caméra trouvée (vérifier PYLON_CAMEMU pour l'émulateur).");
 
-        _recues = _traitees = _perdues = _ratees = _erreurs = _avecDefaut = 0;
+        _recues = _traitees = _nonInspectees = _ratees = _erreurs = _avecDefaut = 0;
         _cts = new CancellationTokenSource();
         _connexionPerdue = new SemaphoreSlim(0);
 
+        // FullMode.Wait : la file ne supprime jamais rien d'elle-même.
+        // Le producteur utilise TryWrite, qui ne bloque pas : il renvoie false si la file est pleine.
         _file = Channel.CreateBounded<Frame>(
-            new BoundedChannelOptions(5) { FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true, SingleWriter = true },
-            _ => Interlocked.Increment(ref _perdues));
+            new BoundedChannelOptions(CapaciteFile) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = true });
 
         _camera = new Camera(infos[0]);
         _camera.CameraOpened += Configuration.AcquireContinuous;
@@ -112,6 +118,7 @@ public sealed class CameraService : IDisposable
             throw;
         }
 
+        // Le journal est créé AVANT le premier déclenchement : une zone non inspectée est toujours tracée
         _journal = new JournalDetections(Path.Combine(AppContext.BaseDirectory, $"detections_{DateTime.Now:yyyyMMdd_HHmmss}.csv"));
         _traitement = Task.Run(() => BoucleTraitement(_file.Reader));
         _surveillance = Task.Run(() => BoucleSurveillance(_cts.Token));
@@ -236,7 +243,16 @@ public sealed class CameraService : IDisposable
         if (r.GrabSucceeded && r.PixelData is byte[] pixels)
         {
             long id = Interlocked.Increment(ref _recues);
-            _file?.Writer.TryWrite(new Frame(id, r.Width, r.Height, (byte[])pixels.Clone(), DateTime.UtcNow));
+            var frame = new Frame(id, r.Width, r.Height, (byte[])pixels.Clone(), DateTime.UtcNow);
+            if (_file is not null && !_file.Writer.TryWrite(frame))
+            {
+                // File pleine : le traitement ne suit plus. On ne jette pas en silence :
+                // l'image est comptée et la zone est journalisée pour être recontrôlée.
+                // Sur une vraie ligne, on noterait aussi la position du codeur (mètre de bande).
+                Interlocked.Increment(ref _nonInspectees);
+                _journal?.EcrireNonInspectee(id, frame.Horodatage, _detecteur?.Version ?? "");
+                Message?.Invoke($"ZONE NON INSPECTÉE : image {id} (file pleine, le traitement ne suit pas la cadence)");
+            }
         }
         else
         {
@@ -389,7 +405,7 @@ public sealed class CameraService : IDisposable
 
         var s = Statistiques();
         Message?.Invoke($"Arrêt. Bilan : reçues {s.Recues}, traitées {s.Traitees}, avec défaut {s.AvecDefaut}, " +
-                        $"perdues {s.Perdues}, ratées {s.Ratees}, erreurs {s.Erreurs}");
+                        $"non inspectées {s.NonInspectees}, ratées {s.Ratees}, erreurs {s.Erreurs}");
         EtatChange?.Invoke(EtatCamera.Arretee);
     }
 

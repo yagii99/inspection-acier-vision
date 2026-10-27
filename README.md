@@ -12,12 +12,13 @@ Projet personnel de bout en bout pour l'inspection visuelle de tôles d'acier : 
 Caméra (pylon, émulateur)
    │  callback ImageGrabbed : copie de l'image, rien d'autre
    ▼
-File bornée (Channel, 5 images, DropOldest)      ← producteur / consommateur
-   │
+File bornée (Channel, 30 images)                 ← producteur / consommateur
+   │  file pleine : aucune image jetée en silence,
+   │  elle est comptée et journalisée « zone non inspectée »
    ▼
 Consommateur : inférence YOLO (ONNX Runtime, C#)  ← try/catch par image
    │
-   ├──► Journal (classe, score, boîte, version du modèle, latence)
+   ├──► Journal (classe, score, boîte, version du modèle, latence, zones non inspectées)
    └──► Interface WPF (affichage limité à ~15 i/s via Dispatcher)
 
 Surveillance : perte de connexion → mode dégradé → reconnexion (1, 2, 4… 30 s)
@@ -70,7 +71,8 @@ Ce que l'analyse des erreurs a montré : les classes les plus faibles (craquelur
 2. **Acquisition C#** : `cd 01_acquisition_csharp/AcquisitionSimulee` puis `dotnet run`. Si `Basler.Pylon.dll` n'est pas trouvée, adapter `<PylonAssembly>` dans le `.csproj`.
 3. **Traitement classique** : `cd 02_traitement_classique/python`, puis `python generer_tole.py` et les scripts `etape1` à `etape6` dans l'ordre.
 4. **Deep learning** : `pip install -r requirements.txt`, télécharger NEU-DET (non inclus dans le dépôt), puis `python etape3_preparer_neu.py CHEMIN_NEU` et `python etape3_entrainer.py` (GPU conseillé ; `--modele yolo11n.pt` pour comparer). `etape5_analyse_erreurs.py` écrit `seuils_par_classe.json`, que l'application C# charge s'il est posé à côté du modèle.
-5. **Application WPF** : copier `best.onnx` à côté de l'exécutable ou définir `INSPECTION_MODELE`, et définir `INSPECTION_IMAGES` vers `neu_yolo/images/test`. Puis `cd 04_integration_csharp/InspectionWpf` et `dotnet run`.
+5. **Application WPF** : dans `04_integration_csharp/InspectionWpf`, créer un dossier `donnees` avec le modèle `best.onnx` et un sous-dossier `images` (quelques images de `neu_yolo/images/test`). Il est copié à côté de l'exécutable à la compilation. Puis `dotnet run` et **Démarrer** : la caméra émulée envoie les images du dossier, et le journal indique au démarrage le modèle chargé et le dossier lu.
+   Les variables `INSPECTION_MODELE` et `INSPECTION_IMAGES` permettent de pointer vers d'autres emplacements, par exemple un dossier au chemin simple comme `C:\demo_inspection`.
 
 ## Ce que j'en retiens
 

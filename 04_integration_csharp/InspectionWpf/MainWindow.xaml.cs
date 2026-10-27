@@ -124,16 +124,16 @@ public partial class MainWindow : System.Windows.Window
 
         var s = _service.Statistiques();
         TexteCompteurs.Text =
-            $"Reçues        {s.Recues}\n" +
-            $"Traitées      {s.Traitees}\n" +
-            $"Avec défaut   {s.AvecDefaut}\n" +
-            $"Perdues       {s.Perdues}\n" +
-            $"Ratées        {s.Ratees}\n" +
-            $"Erreurs       {s.Erreurs}\n" +
-            $"Inférence     {_derniereInferenceMs:F1} ms\n" +
-            $"Latence       {_derniereLatenceMs:F0} ms\n" +
-            $"Luminosité    {_derniereMoyenne:F0}\n" +
-            $"Défauts       {_derniersDefauts}";
+            $"Reçues          {s.Recues}\n" +
+            $"Traitées        {s.Traitees}\n" +
+            $"Avec défaut     {s.AvecDefaut}\n" +
+            $"Non inspectées  {s.NonInspectees}\n" +
+            $"Ratées          {s.Ratees}\n" +
+            $"Erreurs         {s.Erreurs}\n" +
+            $"Inférence       {_derniereInferenceMs:F1} ms\n" +
+            $"Latence         {_derniereLatenceMs:F0} ms\n" +
+            $"Luminosité      {_derniereMoyenne:F0}\n" +
+            $"Défauts         {_derniersDefauts}";
     }
 
     private void AjouterJournal(string message)
