@@ -32,7 +32,9 @@ public sealed class CameraService : IDisposable
     private CancellationTokenSource? _cts;
     private Task? _traitement;
     private Task? _surveillance;
+    private Task? _declenchement;
     private SemaphoreSlim _connexionPerdue = new(0);
+    private volatile int _periodeMs = 200;          // déclenchement logiciel : 5 images/s par défaut
     private Detecteur? _detecteur;
     private JournalDetections? _journal;
 
@@ -113,6 +115,7 @@ public sealed class CameraService : IDisposable
         _journal = new JournalDetections(Path.Combine(AppContext.BaseDirectory, $"detections_{DateTime.Now:yyyyMMdd_HHmmss}.csv"));
         _traitement = Task.Run(() => BoucleTraitement(_file.Reader));
         _surveillance = Task.Run(() => BoucleSurveillance(_cts.Token));
+        _declenchement = Task.Run(() => BoucleDeclenchement(_cts.Token));
 
         Message?.Invoke($"Caméra ouverte : {_camera.CameraInfo[CameraInfoKey.FriendlyName]}");
         EtatChange?.Invoke(EtatCamera.Acquisition);
@@ -145,11 +148,13 @@ public sealed class CameraService : IDisposable
             Message?.Invoke(mode && dossier
                 ? $"Émulateur : lecture des images de {DossierImages}"
                 : $"Émulateur : réglage refusé (ImageFileMode={mode}, ImageFilename={dossier})");
-            _camera.Parameters[PLCamera.AcquisitionFrameRateEnable].TrySetValue(true);
-            _camera.Parameters[PLCamera.AcquisitionFrameRate].TrySetValue(10.0);    // 10 images par seconde
-            if (!_camera.Parameters[PLCamera.AcquisitionFrameRate].IsWritable)
-                _camera.Parameters[PLCamera.AcquisitionFrameRateAbs].TrySetValue(10.0);
         }
+
+        // Déclenchement logiciel : la caméra ne prend une image que sur commande (BoucleDeclenchement).
+        // Sur une vraie ligne, la source serait Line1 : un codeur ou une sortie d'automate.
+        _camera.Parameters[PLCamera.TriggerSelector].TrySetValue(PLCamera.TriggerSelector.FrameStart);
+        _camera.Parameters[PLCamera.TriggerMode].TrySetValue(PLCamera.TriggerMode.On);
+        _camera.Parameters[PLCamera.TriggerSource].TrySetValue(PLCamera.TriggerSource.Software);
 
         AppliquerExposition();
         _camera.StreamGrabber.Start(GrabStrategy.OneByOne, GrabLoop.ProvidedByStreamGrabber);
@@ -172,6 +177,31 @@ public sealed class CameraService : IDisposable
     // ------------------------------------------------------------------
     // Commandes venant de l'interface
     // ------------------------------------------------------------------
+    /// <summary>Cadence d'acquisition en images par seconde (déclenchement logiciel).</summary>
+    public void DefinirCadence(double imagesParSeconde) =>
+        _periodeMs = (int)Math.Round(1000 / Math.Clamp(imagesParSeconde, 0.5, 60));
+
+    private async Task BoucleDeclenchement(CancellationToken ct)
+    {
+        try
+        {
+            while (true)
+            {
+                lock (_verrou)
+                {
+                    try
+                    {
+                        if (_connectee && _camera!.WaitForFrameTriggerReady(100, TimeoutHandling.Return))
+                            _camera.ExecuteSoftwareTrigger();
+                    }
+                    catch (Exception ex) { Message?.Invoke($"Déclenchement impossible : {ex.Message}"); }
+                }
+                await Task.Delay(_periodeMs, ct);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
     public void DefinirExposition(double microsecondes)
     {
         lock (_verrou)
@@ -336,6 +366,7 @@ public sealed class CameraService : IDisposable
 
         _cts?.Cancel();
         if (_surveillance is not null) await _surveillance;
+        if (_declenchement is not null) await _declenchement;
 
         lock (_verrou)
         {

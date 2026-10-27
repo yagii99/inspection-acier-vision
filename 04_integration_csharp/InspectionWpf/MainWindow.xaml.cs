@@ -78,6 +78,7 @@ public partial class MainWindow : System.Windows.Window
 
     private void Panne_Click(object sender, RoutedEventArgs e) => _service.ForcerPanne();
     private void Deconnexion_Click(object sender, RoutedEventArgs e) => _service.SimulerDeconnexion();
+    private void Cadence_Changed(object sender, RoutedPropertyChangedEventArgs<double> e) => _service.DefinirCadence(e.NewValue);
     private void Exposition_Changed(object sender, RoutedPropertyChangedEventArgs<double> e) => _service.DefinirExposition(e.NewValue);
     private void Traitement_Changed(object sender, RoutedPropertyChangedEventArgs<double> e) => _service.DureeTraitementMs = (int)e.NewValue;
 

@@ -34,6 +34,15 @@
                             Click="Deconnexion_Click" IsEnabled="False"/>
                 </UniformGrid>
 
+                <TextBlock Text="Cadence caméra (images/s)"/>
+                <DockPanel Margin="0,0,0,10">
+                    <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right"
+                               Text="{Binding Value, ElementName=SliderCadence, StringFormat=F0}"/>
+                    <Slider x:Name="SliderCadence" Minimum="1" Maximum="30" Value="5"
+                            IsSnapToTickEnabled="True" TickFrequency="1"
+                            ValueChanged="Cadence_Changed"/>
+                </DockPanel>
+
                 <TextBlock Text="Temps d'exposition (µs)"/>
                 <DockPanel Margin="0,0,0,10">
                     <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right"
