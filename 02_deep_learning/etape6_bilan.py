@@ -1,7 +1,7 @@
 """
 Le modèle entraîné sur NEU-DET fonctionne-t-il sur NOTRE tôle ?
 
-On applique le YOLO entraîné par etape3_entrainer.py (entraîné sur les images NEU-DET) à la tôle difficile générée par 02_traitement_classique/python/etape6_limites.py.
+On applique le YOLO entraîné par etape3_entrainer.py (entraîné sur les images NEU-DET) à la tôle difficile générée par 01_traitement_classique/python/etape6_limites.py.
 Les images NEU font 200 x 200 px : on découpe donc notre tôle en vignettes de 200 x 200
 qui se chevauchent, on fait prédire chaque vignette, puis on remet les boîtes sur la tôle entière.
 
