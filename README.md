@@ -28,7 +28,7 @@ Surveillance : perte de connexion → mode dégradé → reconnexion (1, 2, 4…
 
 | Dossier | Ce qu'il contient |
 | --- | --- |
-| [`01_acquisition_csharp`](01_acquisition_csharp) | Acquisition pylon : déclenchement logiciel, producteur / consommateur, robustesse (pannes, reconnexion), séquence motorisée (machine à états + journal CSV) |
+| [`01_acquisition_csharp`](01_acquisition_csharp) | Séquence d'acquisition avec une caméra motorisée : machine à états (déplacement, stabilisation, capture, contrôle, sauvegarde), moteur simulé qui peut se bloquer, journal CSV |
 | [`02_traitement_classique`](02_traitement_classique) | Pipeline OpenCV en Python puis en C# (OpenCvSharp) : correction d'éclairage, seuil statistique (médiane / MAD), morphologie, mesure des défauts, filtre FFT, limites du classique |
 | [`03_deep_learning`](03_deep_learning) | Préparation NEU-DET (VOC → YOLO, split par classe), entraînement YOLO (YOLO26 par défaut, essais versionnés), détection d'anomalies type PatchCore, analyse des erreurs et seuils par classe |
 | [`04_integration_csharp`](04_integration_csharp) | Inférence ONNX en C# (prétraitement letterbox, décodage, NMS) validée contre Python, et application WPF complète : caméra + modèle + seuils par classe + journal CSV des détections |
@@ -59,7 +59,7 @@ mAP@0.5:0.95 : 0,431. Précision 0,69, recall 0,68 au seuil par défaut. Essais 
 
 Ce que l'analyse des erreurs a montré : les classes les plus faibles (craquelures, calamine incrustée) sont bien **reconnues** mais mal **délimitées**. Leurs défauts n'ont pas de bord net, et l'annotation des boîtes est ambiguë. La piste d'amélioration est donc côté données (règle d'annotation : une boîte par groupe de craquelures), pas un modèle plus gros. Même avec YOLO26n, les craquelures restent à 0,38 : changer de modèle ne règle pas un problème d'annotation.
 
-**Intégration C#** : le modèle exporté en ONNX donne en C# les mêmes détections qu'en Python (mêmes classes, scores à 0,01 près, boîtes à 1 ou 2 px près). Latence d'inférence mesurée sur ma machine avec le modèle précédent (YOLO11s) : environ 7,6 ms en C# contre 9,5 ms en Python (échauffement puis moyenne de 20 passages).
+**Intégration C#** : le modèle exporté en ONNX donne en C# les mêmes détections qu'en Python (mêmes classes, scores à 0,01 près, boîtes à 1 ou 2 px près). Avec YOLO26n, l'inférence prend environ 4 ms par image dans l'application WPF. (Mesure antérieure avec YOLO11s : 7,6 ms pour l'inférence seule en C#, 9,5 ms pour l'appel complet d'Ultralytics en Python, prétraitement et décodage compris ; les deux périmètres ne sont pas identiques.)
 
 ![Inférence ONNX en C#](docs/images/10_inference_onnx_csharp.jpg)
 
@@ -68,7 +68,7 @@ Ce que l'analyse des erreurs a montré : les classes les plus faibles (craquelur
 **Prérequis** : Windows, .NET 8 SDK, [Basler pylon](https://www.baslerweb.com/fr-fr/software/pylon/) (pour l'émulateur), Python 3.10+ et `pip install -r requirements.txt`.
 
 1. **Émulateur caméra** : définir la variable d'environnement `PYLON_CAMEMU=1`, puis rouvrir le terminal.
-2. **Acquisition C#** : `cd 01_acquisition_csharp/AcquisitionSimulee` puis `dotnet run`. Si `Basler.Pylon.dll` n'est pas trouvée, adapter `<PylonAssembly>` dans le `.csproj`.
+2. **Caméra motorisée (C#)** : `cd 01_acquisition_csharp/SequenceMotorisee` puis `dotnet run`. Si `Basler.Pylon.dll` n'est pas trouvée, adapter `<PylonAssembly>` dans le `.csproj`.
 3. **Traitement classique** : `cd 02_traitement_classique/python`, puis `python generer_tole.py` et les scripts `etape1` à `etape6` dans l'ordre.
 4. **Deep learning** : `pip install -r requirements.txt`, télécharger NEU-DET (non inclus dans le dépôt), puis `python etape3_preparer_neu.py CHEMIN_NEU` et `python etape3_entrainer.py` (GPU conseillé ; `--modele yolo11n.pt` pour comparer). `etape5_analyse_erreurs.py` écrit `seuils_par_classe.json`, que l'application C# charge s'il est posé à côté du modèle.
 5. **Application WPF** : dans `04_integration_csharp/InspectionWpf`, créer un dossier `donnees` avec le modèle `best.onnx` et un sous-dossier `images` (quelques images de `neu_yolo/images/test`). Il est copié à côté de l'exécutable à la compilation. Puis `dotnet run` et **Démarrer** : la caméra émulée envoie les images du dossier, et le journal indique au démarrage le modèle chargé et le dossier lu.
@@ -76,7 +76,7 @@ Ce que l'analyse des erreurs a montré : les classes les plus faibles (craquelur
 
 ## Ce que j'en retiens
 
-- Le découplage acquisition / traitement est ce qui rend le système robuste : on change le modèle sans toucher à la caméra, et les pertes d'images sont comptées au lieu d'être cachées.
+- Le découplage acquisition / traitement est ce qui rend le système robuste : on change le modèle sans toucher à la caméra, et aucune image n'est jetée en silence : si le traitement ne suit pas, la zone est journalisée comme non inspectée.
 - L'éclairage et la résolution (mm par pixel) fixent la limite de toutes les méthodes : avec 0,25 mm/px, des rayures de 0,3 et 0,6 mm font toutes les deux 2 pixels de large.
 - Un modèle entraîné sur NEU-DET ne se transpose pas tel quel sur une autre ligne (changement de domaine) : il faudrait des images et des annotations du site.
 - En production, sans vérité terrain, il faut surveiller des indicateurs indirects : statistiques d'image, distribution des scores, détections par heure, retours opérateurs.
