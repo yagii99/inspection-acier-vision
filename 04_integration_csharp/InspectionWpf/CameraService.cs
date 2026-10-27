@@ -123,14 +123,28 @@ public sealed class CameraService : IDisposable
         _camera!.Open();
         _camera.Parameters[PLCamera.PixelFormat].TrySetValue(PLCamera.PixelFormat.Mono8);
 
-        if (!string.IsNullOrWhiteSpace(DossierImages) && Directory.Exists(DossierImages))
+        if (string.IsNullOrWhiteSpace(DossierImages))
+            Message?.Invoke("Aucun dossier d'images (INSPECTION_IMAGES vide) : image de test de l'émulateur");
+        else if (!Directory.Exists(DossierImages))
+            Message?.Invoke($"Dossier d'images introuvable : {DossierImages}");
+        else
         {
             // Fonctions propres à l'émulateur : il "filme" les images d'un dossier, l'une après l'autre.
             // Les images NEU font 200 x 200 : on règle la caméra à cette taille.
             _camera.Parameters[PLCamera.Width].TrySetValue(200);
             _camera.Parameters[PLCamera.Height].TrySetValue(200);
-            _camera.Parameters[new EnumName("ImageFileMode")].TrySetValue("On");
-            _camera.Parameters[new StringName("ImageFilename")].TrySetValue(Path.GetFullPath(DossierImages));
+            // Ordre : couper l'image de test (prioritaire sur les fichiers), donner le dossier, puis activer la lecture.
+            var selecteur = _camera.Parameters[new EnumName("TestImageSelector")];
+            bool off = selecteur.TrySetValue("Off");
+            bool dossier = _camera.Parameters[new StringName("ImageFilename")].TrySetValue(Path.GetFullPath(DossierImages));
+            bool mode = _camera.Parameters[new EnumName("ImageFileMode")].TrySetValue("On");
+            Message?.Invoke($"Diagnostic émulateur : TestImageSelector={(selecteur.IsReadable ? selecteur.GetValue() : "absent")} (Off accepté : {off}), " +
+                            $"ImageFileMode={_camera.Parameters[new EnumName("ImageFileMode")].GetValueOrDefault("?")}, " +
+                            $"ImageFilename={_camera.Parameters[new StringName("ImageFilename")].GetValueOrDefault("?")}, " +
+                            $"taille={_camera.Parameters[PLCamera.Width].GetValue()}x{_camera.Parameters[PLCamera.Height].GetValue()}");
+            Message?.Invoke(mode && dossier
+                ? $"Émulateur : lecture des images de {DossierImages}"
+                : $"Émulateur : réglage refusé (ImageFileMode={mode}, ImageFilename={dossier})");
             _camera.Parameters[PLCamera.AcquisitionFrameRateEnable].TrySetValue(true);
             _camera.Parameters[PLCamera.AcquisitionFrameRate].TrySetValue(10.0);    // 10 images par seconde
             if (!_camera.Parameters[PLCamera.AcquisitionFrameRate].IsWritable)

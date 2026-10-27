@@ -2,7 +2,7 @@
 
 Projet personnel de bout en bout pour l'inspection visuelle de tôles d'acier : acquisition caméra en C# (SDK Basler pylon), traitement d'image classique (OpenCV), détection de défauts par deep learning (YOLO), puis intégration du modèle dans une application opérateur C# / WPF via ONNX Runtime.
 
-> **Contexte.** Projet d'apprentissage réalisé en octobre 2026, en parcours guidé (avec l'aide d'un assistant IA pour les explications et une partie du code). Chaque brique a été lancée, testée et analysée sur ma machine. La caméra est l'**émulateur** du SDK pylon (pas de caméra physique), et les données sont le jeu public **NEU-DET** (défauts de surface d'acier laminé à chaud). Ce n'est pas un système industriel déployé.
+> **Contexte.** Projet personnel réalisé en octobre 2026. Chaque brique a été lancée, testée et analysée sur ma machine. La caméra est l'**émulateur** du SDK pylon (pas de caméra physique), et les données sont le jeu public **NEU-DET** (défauts de surface d'acier laminé à chaud). Ce n'est pas un système industriel déployé.
 
 ![Inspection classique en C#](docs/images/02_inspection_classique_csharp.png)
 

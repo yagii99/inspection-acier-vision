@@ -19,3 +19,4 @@ inspection_*/
 journal.csv
 detections_*.csv
 seuils_par_classe.json
+04_integration_csharp/InspectionWpf/donnees/

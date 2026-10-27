@@ -15,13 +15,16 @@ namespace InspectionWpf;
 
 public partial class MainWindow : System.Windows.Window
 {
-    // ---------- Chemins : variables d'environnement, sinon valeurs par défaut ----------
-    //   INSPECTION_MODELE : chemin du modèle ONNX (défaut : best.onnx à côté de l'exécutable)
-    //   INSPECTION_IMAGES : dossier d'images que la caméra émulée "filme" (ex. neu_yolo\images\test)
+    // ---------- Chemins ----------
+    // Par défaut : le dossier "donnees" du projet (copié à côté de l'exécutable à la compilation)
+    //   donnees\best.onnx : le modèle
+    //   donnees\images\   : les images que la caméra émulée "filme"
+    // Les variables d'environnement INSPECTION_MODELE et INSPECTION_IMAGES permettent de pointer ailleurs.
+    private static readonly string Donnees = System.IO.Path.Combine(AppContext.BaseDirectory, "donnees");
     private static readonly string CheminModele =
-        Environment.GetEnvironmentVariable("INSPECTION_MODELE") ?? System.IO.Path.Combine(AppContext.BaseDirectory, "best.onnx");
+        Environment.GetEnvironmentVariable("INSPECTION_MODELE") ?? System.IO.Path.Combine(Donnees, "best.onnx");
     private static readonly string DossierImages =
-        Environment.GetEnvironmentVariable("INSPECTION_IMAGES") ?? "";
+        Environment.GetEnvironmentVariable("INSPECTION_IMAGES") ?? System.IO.Path.Combine(Donnees, "images");
 
     private readonly CameraService _service = new() { CheminModele = CheminModele, DossierImages = DossierImages };
     private readonly DispatcherTimer _timerAffichage;

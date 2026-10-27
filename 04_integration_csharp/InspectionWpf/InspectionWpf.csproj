@@ -22,4 +22,9 @@
     <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.*" />
   </ItemGroup>
 
+  <!-- Le modèle et les images de démonstration, copiés à côté de l'exécutable -->
+  <ItemGroup>
+    <None Include="donnees\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
