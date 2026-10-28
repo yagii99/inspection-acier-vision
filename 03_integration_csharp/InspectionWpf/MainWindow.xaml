@@ -43,19 +43,19 @@
                             ValueChanged="Cadence_Changed"/>
                 </DockPanel>
 
-                <TextBlock Text="Temps d'exposition (µs)"/>
+                <TextBlock Text="Temps d'exposition (µs) – simulé sur l'émulateur"/>
                 <DockPanel Margin="0,0,0,10">
                     <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right"
                                Text="{Binding Value, ElementName=SliderExposition, StringFormat=F0}"/>
-                    <Slider x:Name="SliderExposition" Minimum="100" Maximum="100000" Value="5000"
+                    <Slider x:Name="SliderExposition" Minimum="500" Maximum="20000" Value="5000"
                             ValueChanged="Exposition_Changed"/>
                 </DockPanel>
 
-                <TextBlock Text="Durée de traitement simulée (ms)"/>
+                <TextBlock Text="Charge de traitement ajoutée (ms)"/>
                 <DockPanel Margin="0,0,0,12">
                     <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right"
                                Text="{Binding Value, ElementName=SliderTraitement, StringFormat=F0}"/>
-                    <Slider x:Name="SliderTraitement" Minimum="0" Maximum="200" Value="20"
+                    <Slider x:Name="SliderTraitement" Minimum="0" Maximum="300" Value="0"
                             ValueChanged="Traitement_Changed"/>
                 </DockPanel>
 

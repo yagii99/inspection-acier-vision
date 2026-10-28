@@ -42,6 +42,12 @@ public sealed class CameraService : IDisposable
     private bool _connectee;
     private double _exposition = 5000;
 
+    // L'émulateur qui lit des fichiers ignore le temps d'exposition : on simule son effet sur la luminosité
+    // (gain = exposition / exposition de référence), pour voir l'impact d'une sous- ou surexposition sur la détection.
+    private const double ExpositionReference = 5000;   // µs : l'exposition à laquelle les images d'origine sont « normales »
+    private volatile bool _expositionSimulee;
+    private volatile float _gainExposition = 1f;
+
     // Inspection exhaustive : on ne jette jamais une image en silence.
     // La file absorbe les pics passagers ; si elle est pleine, l'image est refusée,
     // comptée et journalisée comme ZONE NON INSPECTÉE (à recontrôler).
@@ -60,7 +66,7 @@ public sealed class CameraService : IDisposable
     /// <summary>Dossier d'images que la caméra émulée va "filmer" (ex. neu_yolo\images\test). Vide = image de test pylon.</summary>
     public string DossierImages { get; set; } = "";
 
-    /// <summary>Durée de traitement simulée, utilisée seulement s'il n'y a pas de modèle.</summary>
+    /// <summary>Charge de traitement ajoutée à chaque image (ms), avec ou sans modèle : sert à tester la saturation.</summary>
     public int DureeTraitementMs
     {
         get => _dureeTraitementMs;
@@ -153,8 +159,9 @@ public sealed class CameraService : IDisposable
                             $"ImageFilename={_camera.Parameters[new StringName("ImageFilename")].GetValueOrDefault("?")}, " +
                             $"taille={_camera.Parameters[PLCamera.Width].GetValue()}x{_camera.Parameters[PLCamera.Height].GetValue()}");
             Message?.Invoke(mode && dossier
-                ? $"Émulateur : lecture des images de {DossierImages}"
+                ? $"Émulateur : lecture des images de {DossierImages} (exposition simulée par logiciel)"
                 : $"Émulateur : réglage refusé (ImageFileMode={mode}, ImageFilename={dossier})");
+            _expositionSimulee = mode && dossier;
         }
 
         // Déclenchement logiciel : la caméra ne prend une image que sur commande (BoucleDeclenchement).
@@ -214,6 +221,7 @@ public sealed class CameraService : IDisposable
         lock (_verrou)
         {
             _exposition = microsecondes;
+            _gainExposition = (float)(microsecondes / ExpositionReference);
             if (_connectee) AppliquerExposition();
         }
     }
@@ -276,16 +284,20 @@ public sealed class CameraService : IDisposable
         {
             try
             {
+                if (_expositionSimulee)
+                    AppliquerGain(frame.Pixels, _gainExposition);       // émulateur : effet de l'exposition simulé
                 double moyenne = Moyenne(frame.Pixels);
                 var detections = new List<Detection>();
                 var chrono = Stopwatch.StartNew();
 
                 if (_detecteur is not null)
                     detections = _detecteur.Detecter(frame.Pixels, frame.Largeur, frame.Hauteur);
-                else if (DureeTraitementMs > 0)
-                    Thread.Sleep(DureeTraitementMs);                    // pas de modèle : traitement simulé
+                chrono.Stop();                                          // temps du modèle seul
 
-                chrono.Stop();
+                // Charge ajoutée (curseur) : simule un traitement plus lourd, avec ou sans modèle,
+                // pour voir la file se remplir et le compteur « Non inspectées » monter
+                if (DureeTraitementMs > 0)
+                    Thread.Sleep(DureeTraitementMs);
                 Interlocked.Increment(ref _traitees);
                 if (detections.Count > 0)
                 {
@@ -315,6 +327,13 @@ public sealed class CameraService : IDisposable
         foreach (var (classe, seuil) in seuils ?? new())
             _detecteur.SeuilsParClasse[classe] = seuil;
         Message?.Invoke($"Seuils par classe : {string.Join(", ", _detecteur.SeuilsParClasse.Select(kv => $"{kv.Key} {kv.Value:F2}"))}");
+    }
+
+    private static void AppliquerGain(byte[] pixels, float gain)
+    {
+        if (Math.Abs(gain - 1f) < 0.01f) return;
+        for (int i = 0; i < pixels.Length; i++)
+            pixels[i] = (byte)Math.Min(255f, pixels[i] * gain);    // au-delà de 255 : saturation, comme un vrai capteur
     }
 
     private static double Moyenne(byte[] pixels)
