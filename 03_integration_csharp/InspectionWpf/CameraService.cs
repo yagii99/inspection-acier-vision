@@ -228,9 +228,15 @@ public sealed class CameraService : IDisposable
         Message?.Invoke("Panne d'acquisition forcée");
     }
 
+    // Déconnexion simulée : la caméra "met du temps à revenir" (les premiers essais de reconnexion échouent),
+    // pour voir le mode dégradé et le délai qui double. Sans ça, l'émulateur se reconnecte instantanément.
+    private const int EssaisRatesSimules = 3;
+    private volatile int _essaisARater;
+
     public void SimulerDeconnexion()
     {
-        Message?.Invoke("Déconnexion simulée");
+        Message?.Invoke($"Déconnexion simulée (la caméra revient après {EssaisRatesSimules} essais ratés)");
+        _essaisARater = EssaisRatesSimules;
         _connexionPerdue.Release();
     }
 
@@ -358,6 +364,11 @@ public sealed class CameraService : IDisposable
             ct.ThrowIfCancellationRequested();
             try
             {
+                if (_essaisARater > 0)
+                {
+                    _essaisARater--;
+                    throw new InvalidOperationException("caméra injoignable (simulation)");
+                }
                 lock (_verrou) { OuvrirEtDemarrer(); }
                 EtatChange?.Invoke(EtatCamera.Acquisition);
                 Message?.Invoke("Caméra reconnectée, inspection reprise");

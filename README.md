@@ -26,6 +26,8 @@ Surveillance : perte de connexion → mode dégradé → reconnexion (1, 2, 4…
 
 ## Contenu
 
+Chaque dossier a son propre README qui détaille les scripts, les choix techniques et la façon de les lancer.
+
 | Dossier | Ce qu'il contient |
 | --- | --- |
 | [`01_traitement_classique`](01_traitement_classique) | Pipeline OpenCV en Python puis en C# (OpenCvSharp) : correction d'éclairage, seuil statistique (médiane / MAD), morphologie, mesure des défauts, filtre FFT, limites du classique |
